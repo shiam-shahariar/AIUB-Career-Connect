@@ -1,0 +1,111 @@
+AIUB Career Connect
+Project Documentation
+
+1. Project Overview
+
+AIUB Career Connect is a PHP and MySQL career networking and placement portal for AIUB students, alumni, and administrators. It brings together career profiles, alumni and company directories, job and internship listings, mentorship and referral workflows, and private application tracking.
+
+The application is implemented as a server-rendered PHP site with browser-side JavaScript for interactions such as opportunity filtering. MySQL is the source of truth for accounts and application data. The PHP session holds authentication and request state, not the career records.
+
+2. User Roles and Main Features
+
+Students:
+- Register, manage a profile, browse opportunities, and view eligible alumni and companies.
+- Save opportunities to a private application tracker and update their own status, application date, and notes.
+- Set opportunity-alert preferences and submit mentorship or referral requests.
+
+Alumni:
+- Register and maintain an academic and career profile. Alumni profiles are reviewed by an administrator before being verified.
+- Choose profile visibility and whether logged-in users may contact them by email.
+- Publish and manage mentorship availability and, when eligible, their own referral opportunities.
+- Review and respond to mentorship and referral requests.
+
+Administrators:
+- Review alumni profiles and profile reports.
+- Manage user roles and account status, departments, company records, and opportunity listings.
+- Merge duplicate company records, review aggregate engagement information, and inspect the administrative audit log.
+- Provision the initial administrator through the CLI-only setup script; public registration cannot create administrator accounts.
+
+Shared site features include a responsive home page, alumni and company directories, opportunity search, opportunity detail pages, in-app notifications, role-specific dashboards, and page-specific titles.
+
+3. Routes and User Workflows
+
+The root index.php file is the front controller. The page query parameter selects a view. The main pages are:
+
+- home: introduction, database-backed summary counts, and featured opportunities.
+- register and login: student/alumni account creation and sign-in.
+- dashboard and profile: account-specific career activity and profile settings.
+- alumni, companies, and company-detail: searchable directories and profile/company details, subject to visibility and verification rules.
+- opportunities and opportunity-detail: searchable listings and listing details.
+- apply: validates an opportunity destination, records the click, and redirects to the external application page.
+- mentorship and referrals: mentor discovery, alumni listings, and request workflows.
+- applications: the signed-in student's private opportunity tracker.
+- notifications: the signed-in user's notification center.
+- admin: administrator-only review and management tools.
+- change-password: required when an administrator-issued temporary password is used.
+
+Opportunity filtering supports keyword, opportunity type, department, location, work mode, sorting, and pagination. The browser requests filtered results asynchronously from the front controller; the same search can also render as a normal page.
+
+4. Project Structure
+
+Assets/                         Images, logos, and other visual assets
+Controller/AuthController.php   Registration, sign-in, and session identity
+Controller/OpportunityController.php
+                                Opportunity search request handling
+DataBase/aiub_career_connect.sql Consolidated schema for new installations
+DataBase/increment_*_upgrade.sql
+                                One-time migrations for older installations
+Design/Style.css                Shared responsive styles
+Javascript/Script.js            Browser interactions and asynchronous filtering
+Model/Database.php              PDO connection and configuration loading
+Model/DataRepository.php        Database queries and application operations
+View/                           User-facing pages and shared partials
+config.sample.php               Example local database configuration
+index.php                       Front controller and request routing
+setup_admin.php                 CLI-only initial administrator provisioning
+README.txt                      Setup, upgrade, and operating instructions
+
+The application uses a small MVC-style separation: views render pages, controllers handle selected request flows, and DataRepository centralizes database operations. There is no package manager or build step required by the current project.
+
+5. Data Model
+
+The consolidated schema is in DataBase/aiub_career_connect.sql. It creates the aiub_career_connect database using utf8mb4 and includes:
+
+- Accounts and profiles: users, profiles, and departments.
+- Career listings and directories: opportunities and companies.
+- Alumni verification and administration: profile review data, profile_reports, and admin_audit_log.
+- Career-support workflows: mentorship_profiles, mentorship_requests, referral_opportunities, and referral_requests.
+- Student engagement: applications, alert_preferences, opportunity_events, and notifications.
+- Sign-in protection: login_attempts, which records hashed email and IP identifiers with attempt outcomes and timestamps.
+
+Foreign keys, unique constraints, indexes, and status enums are part of the schema. The fresh-install schema seeds department names only; it does not create test accounts, sample companies, or sample opportunities.
+
+6. Privacy, Validation, and Operational Behavior
+
+- Registration is limited to student and alumni roles and requires an @aiub.edu email address, student ID, graduation year, and a password of 8 to 72 characters. The domain check does not verify mailbox ownership.
+- Passwords are stored as password hashes. There is no email verification or self-service password recovery because no email delivery service is configured.
+- The application checks account state and role on protected operations. State-changing forms use CSRF tokens, and login attempts are rate-limited.
+- Session cookies use HTTP-only and same-site settings; HTTPS deployments use secure cookies. Sessions expire after 30 minutes of inactivity.
+- Profile visibility, alumni verification, and contact consent control directory and contact details. Contacting an alumnus opens the visitor's email application; the portal does not send email.
+- Application records and notes are private to the student. Admin engagement reports are aggregate and do not display application notes, mentorship goals, or referral messages.
+- A saved application is a personal tracking record and does not confirm delivery to an employer. A referral request or acceptance is not a guaranteed referral.
+- Opportunity application destinations are checked before redirecting. A missing or invalid destination is shown as unavailable rather than opened.
+- The application requires MySQL. If it cannot connect, it reports that the database is unavailable; it does not fall back to session-only storage.
+- The front controller uses the Asia/Dhaka timezone for application dates and deadlines.
+
+Features not currently provided include in-platform direct messaging, email verification, and self-service password reset.
+
+7. Installation and Database Upgrades
+
+Use README.txt as the canonical source for XAMPP setup, database configuration, first-administrator provisioning, and the exact migration order.
+
+For a new installation, import DataBase/aiub_career_connect.sql into a new or empty database. Never import that consolidated schema over an existing installation. For an existing installation, apply only the remaining increment upgrade scripts, once each and in order, as described in README.txt. Keep config.php and database credentials local; configure the database through config.php or DB_HOST, DB_NAME, DB_USER, and DB_PASS environment variables.
+
+8. Development and Maintenance
+
+- Keep database reads and writes in Model/DataRepository.php and use prepared statements.
+- Keep authorization and request handling in the front controller or the existing controllers; validate permissions on the server for every protected action.
+- Render user-provided values with HTML escaping and preserve the existing CSRF checks on state-changing forms.
+- Update both the consolidated fresh-install schema and the appropriate upgrade path when changing the database model.
+- Keep setup and migration instructions synchronized with README.txt. Do not add credentials or real user data to the repository.
+- There is no automated test suite or build command currently documented in the project. Validate changes by exercising the affected role-specific workflows against a local database.
